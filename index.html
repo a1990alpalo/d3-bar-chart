@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>D3 Beast Mode Chart</title>
+
+    <!-- D3 -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+
+    <style>
+        body {
+            font-family: Arial;
+            text-align: center;
+            background-color: rgb(122, 81, 3);
+            color: white;
+        }
+
+        h1 {
+            color: olivedrab;
+            letter-spacing: 1px;
+            margin-bottom: 5px;
+        }
+
+        #chart {
+            margin-top: 80px;
+        }
+
+        svg {
+            display: block;
+            margin: auto;
+        }
+
+        /* Axes styling */
+        g path,
+        g line {
+            stroke: white;
+        }
+
+        text {
+            fill: white;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>D3.js Visualization</h1>
+    <h2>Beast Mode Activated 🐺🔥</h2>
+    <p>Distribution of Random Values</p>
+
+    <div id="chart"></div>
+
+    <!-- Tooltip -->
+    <div id="tooltip" style="
+        position: absolute;
+        background: white;
+        color: black;
+        padding: 5px 10px;
+        border-radius: 5px;
+        pointer-events: none;
+        opacity: 0;
+        font-size: 12px;
+    "></div>
+
+<script>
+
+d3.csv("data.csv").then(function(data) {
+
+    // Parse data
+    data.forEach(d => {
+        d.value = +d.values;
+    });
+
+    const margin = { top: 20, right: 20, bottom: 40, left: 50 };
+    const width = 800 - margin.left - margin.right;
+    const height = 500 - margin.top - margin.bottom;
+
+    const svg = d3.select("#chart")
+        .append("svg")
+        .attr("width", width + margin.left + margin.right)
+        .attr("height", height + margin.top + margin.bottom)
+        .append("g")
+        .attr("transform", `translate(${margin.left},${margin.top})`);
+
+    // Scales
+    const yScale = d3.scaleLinear()
+        .domain([0, d3.max(data, d => d.value)])
+        .nice()
+        .range([height, 0]);
+
+    const xScale = d3.scaleBand()
+        .domain(data.map((d, i) => i))
+        .range([0, width])
+        .padding(0.3);
+
+    const colorScale = d3.scaleSequential(d3.interpolateBlues)
+        .domain([0, d3.max(data, d => d.value)]);
+
+    const tooltip = d3.select("#tooltip");
+
+    // Bars
+    const bars = svg.selectAll("rect")
+        .data(data)
+        .enter()
+        .append("rect")
+        .attr("x", (d, i) => xScale(i))
+        .attr("width", xScale.bandwidth())
+        .attr("fill", d => colorScale(d.value))
+        .attr("y", height)
+        .attr("height", 0);
+
+    // Animation
+    bars.transition()
+        .duration(1500)
+        .delay((d, i) => i * 150)
+        .attr("y", d => yScale(d.value))
+        .attr("height", d => height - yScale(d.value));
+
+    // Hover + Tooltip
+    bars.on("mouseover", function(event, d) {
+        d3.select(this)
+            .transition()
+            .duration(200)
+            .attr("opacity", 0.7)
+            .attr("width", xScale.bandwidth() + 5);
+
+        tooltip
+            .style("opacity", 1)
+            .html(`Value: ${d.value}`);
+    })
+    .on("mousemove", function(event) {
+        tooltip
+            .style("left", (event.pageX + 10) + "px")
+            .style("top", (event.pageY - 20) + "px");
+    })
+    .on("mouseout", function(event, d) {
+        d3.select(this)
+            .transition()
+            .duration(200)
+            .attr("opacity", 1)
+            .attr("width", xScale.bandwidth());
+
+        tooltip.style("opacity", 0);
+    });
+
+    // Labels
+    svg.selectAll(".bar-label")
+        .data(data)
+        .enter()
+        .append("text")
+        .attr("class", "bar-label")
+        .attr("x", (d, i) => xScale(i) + xScale.bandwidth() / 2)
+        .attr("y", d => yScale(d.value) - 5)
+        .attr("text-anchor", "middle")
+        .attr("font-size", "10px")
+        .text(d => d3.format(",")(d.value));
+
+    // Axes
+    const xAxis = d3.axisBottom(xScale);
+    const yAxis = d3.axisLeft(yScale);
+
+    svg.append("g")
+        .attr("transform", `translate(0, ${height})`)
+        .call(xAxis);
+
+    svg.append("g")
+        .call(yAxis);
+
+});
+
+</script>
+
+</body>
+</html>
