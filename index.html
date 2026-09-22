@@ -41,7 +41,7 @@
         }
 
         text {
-            fill: rgb(133, 7, 7);
+            fill: #cbd5e1;
         }
     </style>
 </head>
@@ -50,7 +50,7 @@
 
     <h1>D3.js Visualization</h1>
     <h2>Beast Mode Activated 🐺🔥</h2>
-    <p>Distribution of Random Values</p>
+    <p>Recorded NYPD arrets by borough - all offense levels</p>
 
     <div id="chart"></div>
 
@@ -68,12 +68,37 @@
 
 <script>
 
-d3.csv("data.csv").then(function(data) {
+d3.csv("data/nypd_arrests_by_borough.csv").then(function(data) {
 
-    // Parse data
-    data.forEach(d => {
-        d.value = +d.values;
-    });
+    // Convert arrest counts from text to numbers.
+data.forEach(d => {
+    d.arrest_count = +d.arrest_count;
+});
+
+const boroughNames = {
+    B: "Bronx",
+    K: "Brooklyn",
+    M: "Manhattan",
+    Q: "Queens",
+    S: "Staten Island"
+};
+
+// Group by borough and sum all offense levels.
+const boroughTotals = d3.rollups(
+    data,
+    rows => d3.sum(rows, d => d.arrest_count),
+    d => d.borough
+);
+
+// Create one chart entry per borough.
+data = boroughTotals.map(([code, total]) => ({
+    borough: boroughNames[code] || code,
+    value: total
+}));
+
+data.sort((a, b) => d3.descending(a.value, b.value));
+
+console.table(data);
 
     const margin = { top: 20, right: 20, bottom: 40, left: 50 };
     const width = 800 - margin.left - margin.right;
@@ -93,7 +118,7 @@ d3.csv("data.csv").then(function(data) {
         .range([height, 0]);
 
     const xScale = d3.scaleBand()
-        .domain(data.map((d, i) => i))
+        .domain(data.map(d => d.borough))
         .range([0, width])
         .padding(0.3);
 
@@ -107,7 +132,7 @@ d3.csv("data.csv").then(function(data) {
         .data(data)
         .enter()
         .append("rect")
-        .attr("x", (d, i) => xScale(i))
+        .attr("x", d => xScale(d.borough))
         .attr("width", xScale.bandwidth())
         .attr("fill", d => colorScale(d.value))
         .attr("y", height)
@@ -153,7 +178,7 @@ d3.csv("data.csv").then(function(data) {
         .enter()
         .append("text")
         .attr("class", "bar-label")
-        .attr("x", (d, i) => xScale(i) + xScale.bandwidth() / 2)
+        .attr("x", (d, i) => xScale(d.borough) + xScale.bandwidth() / 2)
         .attr("y", d => yScale(d.value) - 5)
         .attr("text-anchor", "middle")
         .attr("font-size", "10px")
